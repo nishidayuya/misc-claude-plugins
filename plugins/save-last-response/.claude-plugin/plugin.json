@@ -1,7 +1,7 @@
 {
   "name": "save-last-response",
   "version": "1.0.0",
-  "description": "Stop hook that saves Claude's final response to ~/.claude/last_response.txt, followed by the turn duration line, with Markdown headings pushed down two levels.",
+  "description": "Stop hook that saves Claude's final response to ~/.claude/last_responses/<session id>.txt (with ~/.claude/last_responses/last.txt symlinked to the newest one), followed by the turn duration line, with Markdown headings pushed down two levels.",
   "author": {
     "name": "Yuya.Nishida.",
     "email": "nishidayuya@example.org"
