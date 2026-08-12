@@ -1,0 +1,16 @@
+{
+  "description": "Keep this plugin's WorktreeCreate/WorktreeRemove hooks registered in settings.json, where they are read early enough for `claude -w`.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/setup.sh\"",
+            "statusMessage": "Checking the worktree-prefix hooks"
+          }
+        ]
+      }
+    ]
+  }
+}
