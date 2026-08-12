@@ -1,0 +1,10 @@
+{
+  "name": "worktree-prefix",
+  "version": "1.0.0",
+  "description": "Puts `claude -w` worktrees on a branch named <prefix><worktree name>, with the prefix read from `git config miscClaudePlugins.worktreePrefix` instead of the built-in \"worktree-\". A SessionStart hook registers the WorktreeCreate/WorktreeRemove hooks that do it in the user settings file, which is the only place Claude Code reads them early enough.",
+  "author": {
+    "name": "Yuya.Nishida.",
+    "email": "nishidayuya@example.org"
+  },
+  "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/worktree-prefix"
+}

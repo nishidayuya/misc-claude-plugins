@@ -17,6 +17,12 @@
       "description": "Save Claude's final response to ~/.claude/last_responses/<session id>.txt every time Claude stops.",
       "source": "./plugins/save-last-response",
       "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/save-last-response"
+    },
+    {
+      "name": "worktree-prefix",
+      "description": "Name `claude -w` worktree branches <prefix><name>, with the prefix taken from `git config miscClaudePlugins.worktreePrefix`.",
+      "source": "./plugins/worktree-prefix",
+      "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/worktree-prefix"
     }
   ]
 }
