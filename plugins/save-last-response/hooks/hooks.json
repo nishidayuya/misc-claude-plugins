@@ -1,0 +1,17 @@
+{
+  "description": "Save Claude's final response to ~/.claude/last_response.txt on Stop.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/save-last-response.sh\"",
+            "statusMessage": "Saving response to last_response.txt",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
