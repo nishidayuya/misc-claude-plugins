@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Stop hook: write Claude's final response text to ~/.claude/last_response.txt
-# (always overwritten), followed by the turn duration line the UI shows.
+# Stop hook: write Claude's final response text to
+# ~/.claude/last_responses/<session id>.txt (always overwritten), followed by the
+# turn duration line the UI shows. ~/.claude/last_responses/last.txt is then
+# pointed at the file just written, so it always names the session that stopped
+# most recently.
 #
-# Input: hook JSON on stdin, including .transcript_path (a JSONL file).
+# Input: hook JSON on stdin, including .session_id and .transcript_path (a JSONL
+# file).
 #
 # Caveat: the spinner verb the UI picks ("Churned", "Cooked", ...) is chosen at
 # render time and never recorded in the transcript, so it cannot be reproduced.
@@ -11,13 +15,24 @@
 # levels every Markdown heading is pushed down (0 disables the rewrite).
 set -u
 
-out="$HOME/.claude/last_response.txt"
+dir="$HOME/.claude/last_responses"
 verb="${LAST_RESPONSE_VERB-Cooked}"
 hshift="${LAST_RESPONSE_HEADING_SHIFT-2}"
 
 input=$(cat)
 tp=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
 [ -z "$tp" ] || [ ! -f "$tp" ] && exit 0
+
+# Session ids are uuids; anything else would be a path traversal waiting to
+# happen, so fall back to the transcript's basename and then to a fixed name.
+sid=$(printf '%s' "$input" | jq -r '.session_id // empty')
+case "$sid" in
+  "" | *[!A-Za-z0-9._-]* | .*) sid=$(basename "$tp" .jsonl) ;;
+esac
+case "$sid" in
+  "" | *[!A-Za-z0-9._-]* | .*) sid=unknown ;;
+esac
+out="$dir/$sid.txt"
 
 # Selects the last main-thread assistant entry that actually contains text,
 # skipping trailing tool_use entries and subagent output.
@@ -100,6 +115,8 @@ if [ -n "$verb" ]; then
   done
 fi
 
+mkdir -p "$dir" || exit 0
+
 {
   printf '%s\n' "$msg" | awk -v shift="$hshift" "$SHIFT_HEADINGS"
   if [ -n "$ms" ]; then
@@ -112,4 +129,8 @@ fi
     printf '\n✻ %s for %s\n' "$verb" "$d"
   fi
 } > "$out"
+
+# Relative target, so the directory stays movable. -n keeps ln from following an
+# existing last.txt symlink and creating last.txt/<name>.txt underneath it.
+ln -sfn "$sid.txt" "$dir/last.txt"
 exit 0
