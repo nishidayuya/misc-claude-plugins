@@ -87,6 +87,97 @@ transcript, so it polls until the last assistant entry carries a text block
 of that wait the hook runs with `"async": true`, which keeps it from delaying the
 end of a turn.
 
+### worktree-prefix
+
+`claude -w`, the `EnterWorktree` tool and worktree-isolated agents all put their
+new worktree on a branch called `worktree-<name>`, with no way to configure that
+prefix. This plugin makes it configurable:
+
+```
+git config --global miscClaudePlugins.worktreePrefix wt/
+```
+
+The worktree directory itself stays at `<repo>/.claude/worktrees/<name>`; only
+the branch name changes. A `/` in a worktree name becomes `+` in both the
+directory and the branch, exactly as Claude Code does it, so a prefix is the only
+way to get worktree branches into a namespace of their own.
+
+#### Configuration
+
+Both are read with `git config`, so they can be set per repository or globally:
+
+| Config | Default | Meaning |
+| --- | --- | --- |
+| `miscClaudePlugins.worktreePrefix` | `worktree-` | Prepended to the worktree name verbatim, so the separator is up to you. Set to an empty string to name the branch after the worktree alone. |
+| `miscClaudePlugins.worktreeBaseRef` | `auto` | `auto` branches off `origin/<default branch>`, fetched first, like Claude Code's own `worktree.baseRef: fresh` default. `head` branches off the local `HEAD`. Anything else is used as a ref as-is. |
+
+An invalid prefix (one that would make `<prefix><name>` an invalid branch name)
+aborts worktree creation with an error rather than silently falling back.
+
+#### How it is wired
+
+Claude Code creates the worktree of a `claude -w` launch *before* it registers
+plugin hooks — measured on 2.1.228, about 20ms before `Loading hooks from plugin`
+appears in the debug log, for marketplace and `--plugin-dir` plugins alike. A
+`WorktreeCreate` hook shipped in this plugin's `hooks.json` would therefore never
+fire for the case this plugin exists for. Hooks configured in a settings file are
+read early enough, so the plugin ships a `SessionStart` hook that writes the two
+entries into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`):
+
+```json
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"/home/you/.claude/plugins/marketplaces/misc/plugins/worktree-prefix/hooks/worktree-create.sh\"",
+            "statusMessage": "Creating the worktree"
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [ "…the same for hooks/worktree-remove.sh…" ]
+  }
+}
+```
+
+It writes only entries of its own, leaves other hooks in the file alone, and
+repoints the commands whenever they no longer match the current plugin root, so a
+plugin update heals itself on the next session. Nothing is written unless
+`enabledPlugins` names `worktree-prefix` (or the `all` bundle) somewhere, which
+keeps `--plugin-dir` development sessions out of the user's settings.
+
+The *user* settings file is used rather than a project one on purpose:
+`WorktreeCreate` is honoured from a project's `.claude/settings.json`, but
+`WorktreeRemove` is not, which would remove worktrees and leave their branches
+behind. As a consequence the hooks apply to every repository of that user, not
+only to the one the plugin was enabled from — for a repository with no
+`miscClaudePlugins.worktreePrefix` set, that reproduces the built-in
+`worktree-<name>` naming.
+
+To uninstall, remove the plugin *and* delete those two entries from the settings
+file.
+
+#### Notes
+
+Configuring a `WorktreeCreate` hook makes Claude Code hand the whole creation
+over to it, so what the built-in path does on top of `git worktree add` is gone:
+
+* the `worktree.sparsePaths` and `worktree.symlinkDirectories` settings;
+* worktrees based on a pull request;
+* the `git worktree lock` that marks a worktree as belonging to a live session,
+  and with it the automatic cleanup of worktrees left behind by dead sessions;
+* the branch name in messages like `Created worktree at: … on branch: …`, because
+  Claude Code does not record a branch for a hook-created worktree.
+
+Reproduced here instead: the `.claude/worktrees/<name>` location, the
+`origin/<default branch>` base with a fetch, `--no-track -B`, resuming a worktree
+that is already registered, and deleting the branch together with the worktree.
+
+Needs `jq` and git 2.31 or newer.
+
 ## Development
 
 A plugin manifest cannot say "depend on everything", so the dependency list of
