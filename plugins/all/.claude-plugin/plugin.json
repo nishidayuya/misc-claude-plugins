@@ -1,0 +1,12 @@
+{
+  "name": "all",
+  "description": "Bundle plugin: installing it pulls in every other plugin in this marketplace.",
+  "author": {
+    "name": "Yuya.Nishida.",
+    "email": "nishidayuya@example.org"
+  },
+  "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/all",
+  "dependencies": [
+    "save-last-response"
+  ]
+}
