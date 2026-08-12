@@ -1,0 +1,16 @@
+{
+  "name": "misc",
+  "description": "Miscellaneous Claude Code plugins.",
+  "owner": {
+    "name": "Yuya.Nishida.",
+    "email": "nishidayuya@example.org"
+  },
+  "plugins": [
+    {
+      "name": "save-last-response",
+      "description": "Save Claude's final response to ~/.claude/last_response.txt every time Claude stops.",
+      "source": "./plugins/save-last-response",
+      "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/save-last-response"
+    }
+  ]
+}
