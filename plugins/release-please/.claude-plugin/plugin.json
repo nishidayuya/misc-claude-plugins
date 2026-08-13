@@ -1,0 +1,10 @@
+{
+  "name": "release-please",
+  "version": "1.0.0",
+  "description": "A `/repo-use-release-please` skill that sets a repository up to release with googleapis/release-please-action: it writes the release-please workflow, config and manifest, defaulting to release-type `simple` with no CHANGELOG.md and no version.txt, and opens the pull request from a worktree.",
+  "author": {
+    "name": "Yuya.Nishida.",
+    "email": "nishidayuya@example.org"
+  },
+  "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/release-please"
+}

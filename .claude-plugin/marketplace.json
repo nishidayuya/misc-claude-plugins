@@ -13,6 +13,12 @@
       "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/all"
     },
     {
+      "name": "release-please",
+      "description": "A `/repo-use-release-please` skill that sets a repository up to release with googleapis/release-please-action.",
+      "source": "./plugins/release-please",
+      "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/release-please"
+    },
+    {
       "name": "save-last-response",
       "description": "Save Claude's final response to ~/.claude/last_responses/<session id>.txt every time Claude stops.",
       "source": "./plugins/save-last-response",
