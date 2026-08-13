@@ -46,6 +46,68 @@ separately.
 
 [plugin-dependencies]: https://code.claude.com/docs/en/plugin-dependencies
 
+### release-please
+
+A skill that sets the repository you are in up to release with
+[googleapis/release-please-action][release-please-action]:
+
+```
+/repo-use-release-please [release-type]
+```
+
+It looks at the repository, creates a worktree, writes
+`.github/workflows/release-please.yml`, `release-please-config.json` and
+`.release-please-manifest.json`, checks them, commits, and opens the pull request.
+The release type is `simple` unless you name another one; it is never guessed from
+what the repository contains, so a `package.json` does not turn it into `node`.
+
+The plugin also carries a `reference.md` the skill reads when it needs it: the
+release types and what each rewrites, the config options, `bootstrap-sha` versus
+`last-release-sha`, and the token and repository settings the action needs.
+
+[release-please-action]: https://github.com/googleapis/release-please-action
+
+#### No CHANGELOG.md, no version.txt
+
+The generated config is
+
+```json
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "skip-changelog": true
+    }
+  }
+}
+```
+
+`skip-changelog` drops the `CHANGELOG.md` updater, and the release notes go into
+the GitHub release instead. `version.txt` needs no option at all: the `simple`
+strategy updates it with `createIfMissing: false`, so a repository without the
+file never gets one.
+
+`.release-please-manifest.json` is the one file that has to be committed — its
+updater does not create it either, and without it a release pull request would
+carry no changes at all. The skill seeds it from the newest `v*` tag, or with
+`0.0.0` when there is none, and adds `bootstrap-sha` when that tag has no GitHub
+release, because release-please finds the previous release through the releases
+API rather than through tags.
+
+#### Notes
+
+The skill is `disable-model-invocation: true`, so Claude never starts it on its
+own: it creates a worktree, commits and opens a pull request, which is not
+something to trigger from a guess about what you meant.
+
+It reports the GitHub settings the action needs — a writable
+`default_workflow_permissions` and *Allow GitHub Actions to create and approve
+pull requests* — and prints the `gh` command that fixes them, but changes nothing
+without being told to.
+
+Needs `git`, `gh` and `jq`. Uses `actionlint` on the generated workflow when it is
+installed.
+
 ### save-last-response
 
 A `Stop` hook that writes Claude's final response to
