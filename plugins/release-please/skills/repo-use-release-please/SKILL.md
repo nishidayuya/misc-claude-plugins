@@ -140,21 +140,24 @@ history as unreleased. See `reference.md` for `bootstrap-sha` versus
 * `actionlint .github/workflows/release-please.yml` when `actionlint` is
   installed.
 * `gh api repos/{owner}/{repo}/actions/permissions/workflow` — the workflow needs
-  `default_workflow_permissions` to allow writes and
   `can_approve_pull_request_reviews: true`, or the action fails with
-  `GitHub Actions is not permitted to create or approve pull requests`.
+  `GitHub Actions is not permitted to create or approve pull requests`. Leave
+  `default_workflow_permissions` alone: the workflow file asks for the write
+  permissions it needs in its own `permissions:` block, so a repository default of
+  `read` works and keeps every other workflow on a read-only token.
 
-Report what the settings are and, when something is missing, show the command
-that fixes it:
+Report what the setting is and, when it is false, show the command that fixes it —
+with `default_workflow_permissions` set to the value the repository already has,
+because this `PUT` writes both fields:
 
 ```
 gh api -X PUT repos/{owner}/{repo}/actions/permissions/workflow \
-  -f default_workflow_permissions=write \
+  -f default_workflow_permissions=read \
   -F can_approve_pull_request_reviews=true
 ```
 
 Do not run it yourself unless the user says to. An organization policy can pin
-these settings, in which case the fix belongs in the organization settings.
+this setting, in which case the fix belongs in the organization settings.
 
 ## 5. Commit and open the pull request
 
@@ -166,7 +169,7 @@ open the pull request with `gh pr create`. Title and body in English.
 
 * the files written and the release type used;
 * the pull request URL;
-* the GitHub settings from step 4 that still need changing, if any;
+* the GitHub setting from step 4, if it still needs changing;
 * that a `ci:` commit is not user-facing, so the first release pull request
   appears only once a `feat:` or `fix:` commit lands on the default branch — and
   that `release-as` or `initial-version` forces a release before that

@@ -95,20 +95,23 @@ Both are fixed by giving the action a token that is not `GITHUB_TOKEN`: a
 fine-grained PAT with `contents: write` and `pull-requests: write` on the
 repository, or a GitHub App installation token, passed as the `token` input.
 
-## Repository settings the action needs
+## The repository setting the action needs
 
-`gh api repos/{owner}/{repo}/actions/permissions/workflow` shows both:
+`gh api repos/{owner}/{repo}/actions/permissions/workflow` shows
+`can_approve_pull_request_reviews`. When it is false the action fails with
+`GitHub Actions is not permitted to create or approve pull requests`. This is the
+setting labelled *Allow GitHub Actions to create and approve pull requests* under
+Settings → Actions → General. An organization can pin it, in which case it has to
+be changed in the organization settings.
 
-* `default_workflow_permissions` — `read` blocks the tag and the release. The
-  workflow file asks for `contents: write` explicitly, which is enough as long as
-  the repository does not force read-only; otherwise switch this to `write`.
-* `can_approve_pull_request_reviews` — when this is false the action fails with
-  `GitHub Actions is not permitted to create or approve pull requests`. This is
-  the setting labelled *Allow GitHub Actions to create and approve pull requests*
-  under Settings → Actions → General.
-
-An organization can pin both, in which case they have to be changed in the
-organization settings.
+The same endpoint also carries `default_workflow_permissions`, and it does not
+need to change. A per-workflow `permissions:` block raises the `GITHUB_TOKEN`
+above the repository default, so the generated workflow gets its
+`contents: write`, `pull-requests: write` and `issues: write` even where the
+default is `read` — and leaving the default at `read` is what keeps the token
+read-only in every workflow that does not ask for more, including workflows added
+later. Since a `PUT` to that endpoint writes both fields, pass the value the
+repository already has back with it.
 
 ## Labels
 
