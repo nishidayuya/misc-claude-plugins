@@ -100,10 +100,11 @@ The skill is `disable-model-invocation: true`, so Claude never starts it on its
 own: it creates a worktree, commits and opens a pull request, which is not
 something to trigger from a guess about what you meant.
 
-It reports the GitHub settings the action needs — a writable
-`default_workflow_permissions` and *Allow GitHub Actions to create and approve
-pull requests* — and prints the `gh` command that fixes them, but changes nothing
-without being told to.
+It reports the one GitHub setting the action needs — *Allow GitHub Actions to
+create and approve pull requests* — and prints the `gh` command that fixes it, but
+changes nothing without being told to. The repository-wide workflow permissions
+are left as they are: the generated workflow asks for its write permissions in its
+own `permissions:` block, so a read-only default is fine.
 
 Needs `git`, `gh` and `jq`. Uses `actionlint` on the generated workflow when it is
 installed.
