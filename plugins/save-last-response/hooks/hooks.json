@@ -1,5 +1,5 @@
 {
-  "description": "Save Claude's final response to ~/.claude/last_response.txt on Stop.",
+  "description": "Save Claude's final response to ~/.claude/last_responses/<session id>.md on Stop.",
   "hooks": {
     "Stop": [
       {
@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/save-last-response.sh\"",
-            "statusMessage": "Saving response to last_response.txt",
+            "statusMessage": "Saving response to last_responses/<session id>.md",
             "async": true
           }
         ]
