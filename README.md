@@ -112,9 +112,9 @@ installed.
 ### save-last-response
 
 A `Stop` hook that writes Claude's final response to
-`~/.claude/last_responses/<session id>.txt` every time Claude stops. Each session
+`~/.claude/last_responses/<session id>.md` every time Claude stops. Each session
 gets its own file, always overwritten, so concurrent sessions no longer clobber
-each other. `~/.claude/last_responses/last.txt` is a relative symlink to the file
+each other. `~/.claude/last_responses/last.md` is a relative symlink to the file
 just written, i.e. to the session that stopped most recently.
 
 The turn duration line shown in the UI is appended:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop hook: write Claude's final response text to
-# ~/.claude/last_responses/<session id>.txt (always overwritten), followed by the
-# turn duration line the UI shows. ~/.claude/last_responses/last.txt is then
+# ~/.claude/last_responses/<session id>.md (always overwritten), followed by the
+# turn duration line the UI shows. ~/.claude/last_responses/last.md is then
 # pointed at the file just written, so it always names the session that stopped
 # most recently.
 #
@@ -32,7 +32,7 @@ esac
 case "$sid" in
   "" | *[!A-Za-z0-9._-]* | .*) sid=unknown ;;
 esac
-out="$dir/$sid.txt"
+out="$dir/$sid.md"
 
 # Selects the last main-thread assistant entry that actually contains text,
 # skipping trailing tool_use entries and subagent output.
@@ -131,6 +131,6 @@ mkdir -p "$dir" || exit 0
 } > "$out"
 
 # Relative target, so the directory stays movable. -n keeps ln from following an
-# existing last.txt symlink and creating last.txt/<name>.txt underneath it.
-ln -sfn "$sid.txt" "$dir/last.txt"
+# existing last.md symlink and creating last.md/<name>.md underneath it.
+ln -sfn "$sid.md" "$dir/last.md"
 exit 0
