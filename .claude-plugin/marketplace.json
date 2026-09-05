@@ -14,7 +14,7 @@
     },
     {
       "name": "release-please",
-      "description": "A `/repo-use-release-please` skill that sets a repository up to release with googleapis/release-please-action.",
+      "description": "Skills for googleapis/release-please-action: `/repo-use-release-please` sets a repository up to release with it, `/merge-and-release-please` merges a pull request and the release pull request that follows.",
       "source": "./plugins/release-please",
       "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/release-please"
     },

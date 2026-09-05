@@ -1,7 +1,7 @@
 {
   "name": "release-please",
   "version": "1.0.0",
-  "description": "A `/repo-use-release-please` skill that sets a repository up to release with googleapis/release-please-action: it writes the release-please workflow, config and manifest, defaulting to release-type `simple` with no CHANGELOG.md and no version.txt, and opens the pull request from a worktree.",
+  "description": "Two skills for googleapis/release-please-action: `/repo-use-release-please` sets a repository up to release with it, writing the workflow, config and manifest, defaulting to release-type `simple` with no CHANGELOG.md and no version.txt; `/merge-and-release-please` merges a pull request, gets the default branch green, and merges the release pull request that follows.",
   "author": {
     "name": "Yuya.Nishida.",
     "email": "nishidayuya@example.org"

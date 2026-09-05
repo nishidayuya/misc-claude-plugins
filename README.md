@@ -48,8 +48,13 @@ separately.
 
 ### release-please
 
-A skill that sets the repository you are in up to release with
-[googleapis/release-please-action][release-please-action]:
+Two skills for [googleapis/release-please-action][release-please-action]: one
+sets a repository up to release with it, the other takes a merge all the way
+through the release it produces.
+
+#### /repo-use-release-please
+
+Sets the repository you are in up to release with the action:
 
 ```
 /repo-use-release-please [release-type]
@@ -67,7 +72,7 @@ release types and what each rewrites, the config options, `bootstrap-sha` versus
 
 [release-please-action]: https://github.com/googleapis/release-please-action
 
-#### No CHANGELOG.md, no version.txt
+##### No CHANGELOG.md, no version.txt
 
 The generated config is
 
@@ -94,7 +99,7 @@ carry no changes at all. The skill seeds it from the newest `v*` tag, or with
 release, because release-please finds the previous release through the releases
 API rather than through tags.
 
-#### Notes
+##### Notes
 
 The skill is `disable-model-invocation: true`, so Claude never starts it on its
 own: it creates a worktree, commits and opens a pull request, which is not
@@ -108,6 +113,38 @@ own `permissions:` block, so a read-only default is fine.
 
 Needs `git`, `gh` and `jq`. Uses `actionlint` on the generated workflow when it is
 installed.
+
+#### /merge-and-release-please
+
+Merges a pull request and then follows the merge through to the release:
+
+```
+/merge-and-release-please [pull request URL or number]
+```
+
+Given a pull request URL or number it uses that one — from another repository
+too. Given nothing it works out which pull request the session has been about and
+asks you to confirm it before merging anything.
+
+After the merge it watches every workflow the default branch push started. A run
+sitting at `action_required` is waiting for approval rather than failing, so it
+approves it and keeps watching; a run that fails is re-run at most three times.
+Once the branch is green and the repository uses release-please, the release pull
+request the workflow just opened goes through the same treatment — its checks are
+usually the ones that need approving, because the bot opens it with the default
+`GITHUB_TOKEN` — and the branch is watched once more afterwards, down to
+`gh release list`.
+
+A failure that survives three re-runs ends the command. It then reports which
+job and step failed, whether every attempt failed the same way or the failures
+moved around, and what the merged change has to do with it. It does not edit the
+code, the tests or the workflows to get past a red run, and it never merges with
+`--admin`.
+
+This skill is `disable-model-invocation: true` as well: merging is not something
+to start from a guess.
+
+Needs `git` and `gh`.
 
 ### save-last-response
 
