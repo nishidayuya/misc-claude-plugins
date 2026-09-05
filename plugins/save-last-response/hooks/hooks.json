@@ -1,5 +1,5 @@
 {
-  "description": "Save the turn — the prompt, every AskUserQuestion and its answer, and Claude's final response — to ~/.claude/last_responses/<session id>.md on Stop.",
+  "description": "Save the turn — the prompt, every AskUserQuestion and its answer, and Claude's final response — to ~/.claude/last_responses/<session id>-<nnn>.md on Stop, with <session id>.md and last.md symlinked to the newest one.",
   "hooks": {
     "Stop": [
       {
@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/save-last-response.sh\"",
-            "statusMessage": "Saving the turn to last_responses/<session id>.md",
+            "statusMessage": "Saving the turn to last_responses/<session id>-<nnn>.md",
             "async": true
           }
         ]

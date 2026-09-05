@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Stop hook: write the turn to ~/.claude/last_responses/<session id>.md (always
-# overwritten): the prompt the human typed as a level 3 heading, then every
+# Stop hook: write the turn to ~/.claude/last_responses/<session id>-<nnn>.md,
+# one file per Stop, with <nnn> a zero padded 3 digit counter that starts at 001
+# for every session: the prompt the human typed as a level 3 heading, then every
 # AskUserQuestion of the turn with the answer that came back, then Claude's final
 # response text, then the turn duration line the UI shows.
-# ~/.claude/last_responses/last.md is pointed at the file just written, so it
-# always names the session that stopped most recently.
+# ~/.claude/last_responses/<session id>.md is a relative symlink to the newest
+# turn of that session, and ~/.claude/last_responses/last.md a relative symlink
+# to the <session id>.md of the session that stopped most recently.
 #
 # Input: hook JSON on stdin, including .session_id and .transcript_path (a JSONL
 # file).
@@ -34,7 +36,6 @@ esac
 case "$sid" in
   "" | *[!A-Za-z0-9._-]* | .*) sid=unknown ;;
 esac
-out="$dir/$sid.md"
 
 # Selects the last main-thread assistant entry that actually contains text,
 # skipping trailing tool_use entries and subagent output.
@@ -220,6 +221,23 @@ fi
 
 mkdir -p "$dir" || exit 0
 
+# One file per Stop, so pick up where this session left off. The counter is kept
+# per session, which keeps concurrent sessions out of each other's numbering, and
+# `10#` keeps a zero padded number from being read as octal.
+n=0
+for f in "$dir/$sid"-[0-9][0-9][0-9]*.md; do
+  [ -e "$f" ] || continue
+  b=${f##*/}
+  b=${b%.md}
+  b=${b##*-}
+  case "$b" in
+    "" | *[!0-9]*) continue ;;
+  esac
+  [ "$((10#$b))" -gt "$n" ] && n=$((10#$b))
+done
+base=$(printf '%s-%03d.md' "$sid" "$((n + 1))")
+out="$dir/$base"
+
 {
   if [ -n "$prefix" ]; then
     printf '%s\n\n' "$prefix"
@@ -236,7 +254,9 @@ mkdir -p "$dir" || exit 0
   fi
 } > "$out"
 
-# Relative target, so the directory stays movable. -n keeps ln from following an
-# existing last.md symlink and creating last.md/<name>.md underneath it.
+# Relative targets, so the directory stays movable. -n keeps ln from following an
+# existing symlink and creating <name>.md/<target> underneath it, and -f replaces
+# the plain <session id>.md file that older versions of this hook wrote.
+ln -sfn "$base" "$dir/$sid.md"
 ln -sfn "$sid.md" "$dir/last.md"
 exit 0
