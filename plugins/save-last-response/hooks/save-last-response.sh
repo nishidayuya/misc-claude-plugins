@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Stop hook: write Claude's final response text to
-# ~/.claude/last_responses/<session id>.md (always overwritten), followed by the
-# turn duration line the UI shows. ~/.claude/last_responses/last.md is then
-# pointed at the file just written, so it always names the session that stopped
-# most recently.
+# Stop hook: write the turn to ~/.claude/last_responses/<session id>.md (always
+# overwritten): the prompt the human typed as a level 3 heading, then every
+# AskUserQuestion of the turn with the answer that came back, then Claude's final
+# response text, then the turn duration line the UI shows.
+# ~/.claude/last_responses/last.md is pointed at the file just written, so it
+# always names the session that stopped most recently.
 #
 # Input: hook JSON on stdin, including .session_id and .transcript_path (a JSONL
 # file).
@@ -12,7 +13,8 @@
 # render time and never recorded in the transcript, so it cannot be reproduced.
 # Override the word with LAST_RESPONSE_VERB; set LAST_RESPONSE_VERB="" to drop
 # the duration line entirely. LAST_RESPONSE_HEADING_SHIFT controls how many
-# levels every Markdown heading is pushed down (0 disables the rewrite).
+# levels every Markdown heading of the response is pushed down (0 disables the
+# rewrite); the prompt heading is always level 3 and is never shifted.
 set -u
 
 dir="$HOME/.claude/last_responses"
@@ -44,6 +46,105 @@ def lasttext:
              and (.message.content|type=="array")
              and (.message.content|any(.type=="text"))) ]
   | last;
+JQ
+
+# Builds everything that goes above the final response: the prompt of this turn
+# as a level 3 heading, then one "question, answer, ---" block per
+# AskUserQuestion the turn made. A prompt that spans several lines gets a "---"
+# of its own, since only its first line is the heading.
+read -r -d '' PREFIX <<'JQ' || true
+def txt:
+  (.message.content) as $c
+  | if ($c|type) == "string" then $c
+    elif ($c|type) == "array" then ($c | map(select(.type=="text") | .text) | join("\n"))
+    else ""
+    end;
+
+# The transcript records more as a user entry than the human typing: hook and
+# skill context (isMeta), local command echoes and output, task notifications,
+# interruptions, and the tool_result of every tool call.
+def isprompt:
+  .type == "user"
+  and (.isMeta != true)
+  and (.isSidechain != true)
+  and (.isCompactSummary != true)
+  and (
+    (txt) as $t
+    | ($t | length) > 0
+      and (
+        ($t | startswith("<local-command-caveat>"))
+        or ($t | startswith("<local-command-stdout>"))
+        or ($t | startswith("<task-notification>"))
+        or ($t | startswith("[Request interrupted"))
+        | not
+      )
+  );
+
+def istext:
+  .type == "assistant"
+  and (.isSidechain != true)
+  and (.message.content | type == "array")
+  and (.message.content | any(.type == "text"));
+
+# A slash command reaches the transcript as an XML envelope rather than as what
+# was typed, so put it back together as "/name args".
+def prompttext:
+  (txt) as $t
+  | if ($t | test("<command-name>")) then
+      (try ($t | capture("<command-name>(?<v>[^<]*)</command-name>") | .v) catch "") as $n
+      | (try ($t | capture("<command-args>(?<v>[^<]*)</command-args>") | .v) catch "") as $a
+      | ([$n, $a] | map(select(. != "")) | join(" "))
+    else $t
+    end
+  | sub("[[:space:]]+$"; "");
+
+# The questions with their options, then the answers in the same order, so a
+# call that asked several questions still reads top to bottom.
+def block($qs; $ans; $notes):
+  [ ($qs | map(
+      "**" + .question + "**"
+      + ( (.options // [])
+          | map("\n- " + .label
+                + (if ((.description // "") == "") then "" else ": " + .description end))
+          | if length == 0 then "" else "\n" + join("") end )
+    ) | join("\n\n")),
+    ($qs | map(
+      .question as $q
+      | "→ " + (($ans[$q] // "(unanswered)") | tostring)
+        + (($notes[$q].notes // "") | if . == "" then "" else " — " + . end)
+    ) | join("\n"))
+  ] | join("\n\n");
+
+. as $all
+| ([ $all | to_entries[] | select(.value | istext) ] | last) as $last
+| ($last.key // (($all | length) - 1)) as $li
+| ([ $all | to_entries[] | select(.key < $li) | select(.value | isprompt) ] | last) as $p
+| ($p.value | prompttext) as $pt
+| [ ( if $p == null then empty
+      else "### " + $pt + (if ($pt | contains("\n")) then "\n\n---" else "" end)
+      end ) ]
+  + ( [ $all | to_entries[]
+        | select(.key > ($p.key // -1) and .key < $li)
+        | .value
+        | select((.isSidechain != true)
+                 and .type == "assistant"
+                 and (.message.content | type == "array"))
+        | .message.content[]
+        | select(.type == "tool_use" and .name == "AskUserQuestion") ]
+      | map(
+          .id as $id
+          | .input.questions as $asked
+          # The answers live on the tool_result entry, not on the tool_use.
+          | ([ $all[]
+               | select(.type == "user"
+                        and (.message.content | type == "array")
+                        and (.message.content
+                             | any(.type == "tool_result" and .tool_use_id == $id)))
+               | .toolUseResult ] | last) as $r
+          | block(($r.questions // $asked // []); ($r.answers // {}); ($r.annotations // {}))
+            + "\n\n---"
+        ) )
+| join("\n\n")
 JQ
 
 # Pushes every ATX heading down by `shift` levels, clamped at 6. Fenced code
@@ -97,6 +198,8 @@ msg=$(jq -rs "$LASTTEXT"'
 ' "$tp" 2>/dev/null)
 [ -z "$msg" ] && exit 0
 
+prefix=$(jq -rs "$PREFIX" "$tp" 2>/dev/null)
+
 # The turn_duration entry lands right after the final response (~100ms later),
 # so give it a moment. Only accept one newer than the response itself, or we
 # would report the *previous* turn's duration.
@@ -118,6 +221,9 @@ fi
 mkdir -p "$dir" || exit 0
 
 {
+  if [ -n "$prefix" ]; then
+    printf '%s\n\n' "$prefix"
+  fi
   printf '%s\n' "$msg" | awk -v shift="$hshift" "$SHIFT_HEADINGS"
   if [ -n "$ms" ]; then
     total=$(( (${ms%%.*} + 500) / 1000 ))
