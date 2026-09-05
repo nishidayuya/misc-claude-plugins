@@ -1,6 +1,6 @@
 {
   "name": "save-last-response",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Stop hook that saves every turn to ~/.claude/last_responses/<session id>-<nnn>.md (with <session id>.md symlinked to the newest turn of that session and last.md to the session that stopped most recently): the prompt as a level 3 heading, every AskUserQuestion with the answer it got, Claude's final response with Markdown headings pushed down two levels, and the turn duration line.",
   "author": {
     "name": "Yuya.Nishida.",
