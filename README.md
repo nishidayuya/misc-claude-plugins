@@ -149,7 +149,7 @@ Needs `git` and `gh`.
 ### save-last-response
 
 A `Stop` hook that writes the whole turn to
-`~/.claude/last_responses/<session id>-<nnn>.md` every time Claude stops. Every
+`~/.claude/last_responses/<session id>_<nnn>.md` every time Claude stops. Every
 turn keeps a file of its own: `<nnn>` is a zero padded 3 digit counter that
 starts at `001` for each session, so nothing is overwritten and concurrent
 sessions stay out of each other's way.
@@ -161,8 +161,9 @@ Two relative symlinks point at the newest one:
 | `~/.claude/last_responses/<session id>.md` | the newest turn of that session |
 | `~/.claude/last_responses/last.md` | the `<session id>.md` of the session that stopped most recently |
 
-A session that stops more than 999 times grows a digit (`-1000.md`); the
-symlinks follow it either way.
+The separator is `_` rather than `-` so that `<session id>.md` sorts ahead of
+the turns it points into (`.` comes before `_`). A session that stops more than
+999 times grows a digit (`_1000.md`); the symlinks follow it either way.
 
 The file starts with the prompt that began the turn, as a level 3 heading:
 

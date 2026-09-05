@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook: write the turn to ~/.claude/last_responses/<session id>-<nnn>.md,
+# Stop hook: write the turn to ~/.claude/last_responses/<session id>_<nnn>.md,
 # one file per Stop, with <nnn> a zero padded 3 digit counter that starts at 001
 # for every session: the prompt the human typed as a level 3 heading, then every
 # AskUserQuestion of the turn with the answer that came back, then Claude's final
@@ -225,17 +225,17 @@ mkdir -p "$dir" || exit 0
 # per session, which keeps concurrent sessions out of each other's numbering, and
 # `10#` keeps a zero padded number from being read as octal.
 n=0
-for f in "$dir/$sid"-[0-9][0-9][0-9]*.md; do
+for f in "$dir/$sid"_[0-9][0-9][0-9]*.md; do
   [ -e "$f" ] || continue
   b=${f##*/}
   b=${b%.md}
-  b=${b##*-}
+  b=${b##*_}
   case "$b" in
     "" | *[!0-9]*) continue ;;
   esac
   [ "$((10#$b))" -gt "$n" ] && n=$((10#$b))
 done
-base=$(printf '%s-%03d.md' "$sid" "$((n + 1))")
+base=$(printf '%s_%03d.md' "$sid" "$((n + 1))")
 out="$dir/$base"
 
 {
