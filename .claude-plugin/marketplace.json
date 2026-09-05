@@ -20,7 +20,7 @@
     },
     {
       "name": "save-last-response",
-      "description": "Save the turn — the prompt, every AskUserQuestion and its answer, and Claude's final response — to ~/.claude/last_responses/<session id>.md every time Claude stops.",
+      "description": "Save the turn — the prompt, every AskUserQuestion and its answer, and Claude's final response — to ~/.claude/last_responses/<session id>_<nnn>.md every time Claude stops.",
       "source": "./plugins/save-last-response",
       "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/save-last-response"
     },
