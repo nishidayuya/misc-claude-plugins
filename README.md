@@ -148,23 +148,68 @@ Needs `git` and `gh`.
 
 ### save-last-response
 
-A `Stop` hook that writes Claude's final response to
+A `Stop` hook that writes the whole turn to
 `~/.claude/last_responses/<session id>.md` every time Claude stops. Each session
 gets its own file, always overwritten, so concurrent sessions no longer clobber
 each other. `~/.claude/last_responses/last.md` is a relative symlink to the file
 just written, i.e. to the session that stopped most recently.
 
-The turn duration line shown in the UI is appended:
+The file starts with the prompt that began the turn, as a level 3 heading:
 
-```
+```markdown
+### Which Web UI should we build on?
+
 …(the final response text)…
 
 ✻ Cooked for 4m 17s
 ```
 
-Markdown headings in the response are pushed down two levels (`##` becomes
-`####`), clamped at level 6. Fenced code blocks are tracked, so shell comments
-inside them are never mistaken for headings.
+The turn duration line shown in the UI is appended at the end. Markdown headings
+in the response are pushed down two levels (`##` becomes `####`), clamped at
+level 6; the prompt heading is always level 3 and is never shifted. Fenced code
+blocks are tracked, so shell comments inside them are never mistaken for
+headings.
+
+A prompt of several lines keeps only its first line in the heading, so a `---`
+is written after it to separate it from the response:
+
+```markdown
+### first line
+second line
+third line
+
+---
+
+…(the final response text)…
+```
+
+A slash command reaches the transcript as an XML envelope rather than as what was
+typed, so it is put back together as `### /code-review high`.
+
+#### AskUserQuestion
+
+Every `AskUserQuestion` of the turn goes between the prompt and the response, with
+the answer that came back and a `---` after it:
+
+```markdown
+### Add a script that renames the files
+
+**Which language should we implement it in?**
+
+- Python: already on every machine here, and `pathlib` covers the whole job
+- Ruby: the repository already carries a Gemfile and a Rakefile
+- TypeScript: shares the tooling the front end already uses
+
+→ Ruby
+
+---
+
+…(the final response text)…
+```
+
+A call that asked several questions lists them all, then their answers in the
+same order. A note typed next to an answer follows it after an em dash, and a
+question that was never answered reads `→ (unanswered)`.
 
 #### Configuration
 
@@ -173,7 +218,7 @@ Both are read from the environment:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `LAST_RESPONSE_VERB` | `Cooked` | The word in the duration line. Set to an empty string to drop the line entirely. |
-| `LAST_RESPONSE_HEADING_SHIFT` | `2` | How many levels headings are pushed down. `0` keeps the response as-is. |
+| `LAST_RESPONSE_HEADING_SHIFT` | `2` | How many levels the headings of the response are pushed down. `0` keeps the response as-is. |
 
 #### Notes
 

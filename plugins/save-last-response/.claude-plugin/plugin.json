@@ -1,7 +1,7 @@
 {
   "name": "save-last-response",
   "version": "1.1.0",
-  "description": "Stop hook that saves Claude's final response to ~/.claude/last_responses/<session id>.md (with ~/.claude/last_responses/last.md symlinked to the newest one), followed by the turn duration line, with Markdown headings pushed down two levels.",
+  "description": "Stop hook that saves the turn to ~/.claude/last_responses/<session id>.md (with ~/.claude/last_responses/last.md symlinked to the newest one): the prompt as a level 3 heading, every AskUserQuestion with the answer it got, Claude's final response with Markdown headings pushed down two levels, and the turn duration line.",
   "author": {
     "name": "Yuya.Nishida.",
     "email": "nishidayuya@example.org"
