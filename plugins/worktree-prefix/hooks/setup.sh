@@ -63,37 +63,47 @@ else
 fi
 changes=
 
-# Adds or repoints one event's entry. Only an entry whose command names this
-# plugin's script is touched; hooks the user configured next to it are left
-# alone.
+# Adds, repoints or deduplicates one event's entry. Only a hook whose command
+# runs this plugin's script is touched; hooks the user configured next to it are
+# left alone.
+#
+# The script is recognised under a `--plugin-dir` root
+# (.../worktree-prefix/hooks/<script>) as well as under a marketplace cache
+# root, which has a version directory in between
+# (.../worktree-prefix/1.0.0/hooks/<script>). Matching only the former made
+# every session append another copy.
 sync_hook() {
   local event=$1 script=$2 status=$3
-  local marker="worktree-prefix/hooks/$script"
   local command="bash \"$plugin_root/hooks/$script\""
-  local actual updated
+  local ours='def ours: (.command // "")
+    | test("/worktree-prefix/([^/\"]+/)?hooks/" + ($script | gsub("\\."; "\\.")) + "\"$");'
+  local actual count updated
 
-  actual=$(printf '%s' "$settings" | jq -r \
-    --arg event "$event" --arg marker "$marker" \
-    '[.hooks[$event][]?.hooks[]?.command // empty | select(contains($marker))] | .[0] // empty'
+  actual=$(printf '%s' "$settings" | jq -c \
+    --arg event "$event" --arg script "$script" \
+    "$ours"' [.hooks[$event][]?.hooks[]? | select(ours) | .command]'
   ) || return 0
-  [ "$actual" = "$command" ] && return 0
+  [ "$actual" = "$(jq -cn --arg command "$command" '[$command]')" ] && return 0
+  count=$(printf '%s' "$actual" | jq 'length') || return 0
 
+  # Drop every copy of our hook, then append exactly one. An entry left with no
+  # hook at all is removed too, so stale copies do not linger as empty entries.
   updated=$(printf '%s' "$settings" | jq \
-    --arg event "$event" --arg marker "$marker" \
-    --arg command "$command" --arg status "$status" '
-      def ours: (.command // "") | contains($marker);
+    --arg event "$event" --arg script "$script" \
+    --arg command "$command" --arg status "$status" "$ours"'
       .hooks //= {}
-      | .hooks[$event] //= []
-      | if [.hooks[$event][]?.hooks[]? | select(ours)] | length == 0
-        then .hooks[$event] += [{
-          hooks: [{type: "command", command: $command, statusMessage: $status}]
-        }]
-        else (.hooks[$event][]?.hooks[]? | select(ours) | .command) = $command
-        end
+      | .hooks[$event] = (
+          [(.hooks[$event] // [])[]
+           | .hooks |= map(select(ours | not))
+           | select(.hooks | length > 0)]
+          + [{hooks: [{type: "command", command: $command, statusMessage: $status}]}]
+        )
     ') || return 0
 
   settings=$updated
-  if [ -n "$actual" ]; then
+  if [ "$count" -gt 1 ]; then
+    changes="${changes:+$changes, }deduplicated $event"
+  elif [ "$count" -eq 1 ]; then
     changes="${changes:+$changes, }repointed $event"
   else
     changes="${changes:+$changes, }added $event"
