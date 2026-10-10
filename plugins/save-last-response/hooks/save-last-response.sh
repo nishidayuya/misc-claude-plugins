@@ -8,8 +8,8 @@
 # turn of that session, and ~/.claude/last_responses/last.md a relative symlink
 # to the <session id>.md of the session that stopped most recently.
 #
-# Input: hook JSON on stdin, including .session_id and .transcript_path (a JSONL
-# file).
+# Input: hook JSON on stdin, including .session_id, .transcript_path (a JSONL
+# file) and, on recent Claude Code versions, .last_assistant_message.
 #
 # Caveat: the spinner verb the UI picks ("Churned", "Cooked", ...) is chosen at
 # render time and never recorded in the transcript, so it cannot be reproduced.
@@ -177,35 +177,57 @@ BEGIN { infence = 0; fch = "" }
 }
 AWK
 
+# The final response of this turn as Claude Code hands it to the hook. Older
+# versions do not send it, and then the transcript is the only source.
+expected=$(printf '%s' "$input" | jq -r '.last_assistant_message // empty')
+
 # The hook starts before Claude Code has flushed the final response to the
 # transcript, so without waiting we would read the *previous* response. Poll
-# until the last main-thread assistant entry carries a text block (up to ~5s).
+# (up to ~5s) until the transcript has caught up: until its last text entry is
+# the response Claude Code reported, or, without one, until the last
+# main-thread assistant entry carries a text block. The latter is fooled by a
+# turn that answers without any tool call, such as one started by a subagent's
+# report: the previous turn's response is then still the last assistant entry.
+synced=false
 for _ in $(seq 1 50); do
-  ready=$(jq -rs '
-    [ .[] | select(.type=="assistant" and (.isSidechain != true)) ]
-    | last
-    | (.message.content // [])
-    | if type=="array" then any(.type=="text") else false end
-  ' "$tp" 2>/dev/null)
-  [ "$ready" = "true" ] && break
+  if [ -n "$expected" ]; then
+    ready=$(jq -rs --arg expected "$expected" "$LASTTEXT"'
+      def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
+      (lasttext | .message.content | map(select(.type=="text") | .text) | join("\n") | trim)
+        == ($expected | trim)
+    ' "$tp" 2>/dev/null)
+  else
+    ready=$(jq -rs '
+      [ .[] | select(.type=="assistant" and (.isSidechain != true)) ]
+      | last
+      | (.message.content // [])
+      | if type=="array" then any(.type=="text") else false end
+    ' "$tp" 2>/dev/null)
+  fi
+  [ "$ready" = "true" ] && synced=true && break
   sleep 0.1
 done
 
-msg=$(jq -rs "$LASTTEXT"'
-  lasttext
-  | .message.content
-  | map(select(.type=="text") | .text)
-  | join("\n")
-' "$tp" 2>/dev/null)
+if [ -n "$expected" ]; then
+  msg=$expected
+else
+  msg=$(jq -rs "$LASTTEXT"'
+    lasttext
+    | .message.content
+    | map(select(.type=="text") | .text)
+    | join("\n")
+  ' "$tp" 2>/dev/null)
+fi
 [ -z "$msg" ] && exit 0
 
 prefix=$(jq -rs "$PREFIX" "$tp" 2>/dev/null)
 
 # The turn_duration entry lands right after the final response (~100ms later),
 # so give it a moment. Only accept one newer than the response itself, or we
-# would report the *previous* turn's duration.
+# would report the *previous* turn's duration. If the transcript never caught
+# up, its last response is the previous one, so leave the line out instead.
 ms=""
-if [ -n "$verb" ]; then
+if [ -n "$verb" ] && { [ -z "$expected" ] || "$synced"; }; then
   for _ in $(seq 1 20); do
     ms=$(jq -rs "$LASTTEXT"'
       (lasttext | .timestamp) as $ts
