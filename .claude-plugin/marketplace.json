@@ -13,6 +13,12 @@
       "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/all"
     },
     {
+      "name": "pr-ci",
+      "description": "`/loop /pr-ci:pr-ci <URL>` watches the CI of every commit of a pull request or merge request, pushing a temporary branch for each commit that had no CI or whose CI was cancelled, and deleting it once CI has finished.",
+      "source": "./plugins/pr-ci",
+      "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/pr-ci"
+    },
+    {
       "name": "release-please",
       "description": "Skills for googleapis/release-please-action: `/repo-use-release-please` sets a repository up to release with it, `/merge-and-release-please` merges a pull request and the release pull request that follows.",
       "source": "./plugins/release-please",

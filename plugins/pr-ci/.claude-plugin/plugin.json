@@ -1,0 +1,10 @@
+{
+  "name": "pr-ci",
+  "version": "1.0.0",
+  "description": "`/pr-ci:pr-ci <URL>` watches the CI of every commit of a GitHub pull request or GitLab merge request. A commit that never had CI (a non-head commit of a multi-commit push) or whose CI was cancelled gets a temporary branch pr-ci/<number>/<sha> pushed so that CI runs on it, and the branch is deleted once CI has finished. Run it under `/loop` to keep watching until told to stop.",
+  "author": {
+    "name": "Yuya.Nishida.",
+    "email": "nishidayuya@example.org"
+  },
+  "homepage": "https://github.com/nishidayuya/misc-claude-plugins/tree/main/plugins/pr-ci"
+}
