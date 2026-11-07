@@ -46,6 +46,55 @@ separately.
 
 [plugin-dependencies]: https://code.claude.com/docs/en/plugin-dependencies
 
+### pr-ci
+
+A skill that watches the CI of every commit of a GitHub pull request or a GitLab
+merge request, not only of its head:
+
+```
+/loop /pr-ci:pr-ci <pull request or merge request URL>
+```
+
+Pushing several commits at once runs CI on the newest one only, and a newer push
+often cancels the CI of the previous one. For each commit of the pull request
+that has no CI at all, or whose CI was cancelled, the skill pushes a temporary
+branch `pr-ci/<number>/<sha>` pointing at it, so that CI runs on that commit.
+Once that CI has finished, the branch is deleted again. Every iteration reports
+what changed.
+
+Under `/loop` it keeps going until you say 「中断」 (or otherwise ask it to stop).
+It then stops the loop, lists the temporary branches that are still there, and
+asks whether to delete them. It also stops by itself, deleting its branches,
+when the pull request is merged or closed. Run without `/loop`, it does one
+iteration.
+
+#### Limits
+
+* Only GitHub Actions workflow runs and GitLab pipelines count as CI.
+* The temporary branch is an ordinary branch push, so CI has to run on it. On
+  GitHub the workflow needs an `on: push` that matches `pr-ci/**`; on GitLab,
+  `workflow:rules` have to allow a branch pipeline. When nothing starts within 10
+  minutes (`PR_CI_TRIGGER_TIMEOUT`), the branch is deleted and the commit is
+  reported as not triggerable, rather than pushed again.
+* A cancelled commit is pushed at most three times (`PR_CI_MAX_ATTEMPTS`).
+* A failed commit is only reported, never re-run or fixed.
+* The head commit is never pushed for a missing CI, only for a cancelled one: its
+  CI may simply not have started yet.
+
+#### Notes
+
+The skill cannot be `disable-model-invocation: true`, because `/loop` hands such
+a skill to Claude as plain text instead of running it. Its description tells
+Claude to run it only when you invoke it explicitly.
+
+The pushes go over HTTPS with the credential helper of `gh` or `glab`, from a
+bare, blob-less cache repository under the plugin data directory
+(`~/.claude/plugins/data/…`), which also records what has been pushed. The
+repository your session is in is never touched, so the URL may name any
+repository you can push to.
+
+Needs `git`, `jq`, and `gh` (GitHub) or `glab` (GitLab).
+
 ### release-please
 
 Two skills for [googleapis/release-please-action][release-please-action]: one
